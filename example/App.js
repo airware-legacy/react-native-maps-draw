@@ -14,7 +14,7 @@ import Examples from './examples';
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   switchCnt: {
@@ -32,6 +32,9 @@ const styles = StyleSheet.create({
   },
   item: {
     padding: 30,
+  },
+  itemLabel: {
+    textAlign: 'center',
   },
 });
 
@@ -69,7 +72,7 @@ class App extends React.Component {
     return (
       <TouchableOpacity key={key} onPress={() => this.setState({ Component: example.Component })}>
         <View style={styles.item}>
-          <Text>{example.name}</Text>
+          <Text style={styles.itemLabel}>{example.name}</Text>
         </View>
       </TouchableOpacity>
     );

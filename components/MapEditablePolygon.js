@@ -19,6 +19,20 @@ class MapEditablePolygon extends React.Component {
     };
   }
 
+  setNativeProps(props = {}) {
+    if (props.shape) {
+      this._setNativeShapeProps(props.shape);
+    }
+
+    if (props.vertex) {
+      this._setNativeVertexProps(props.vertex);
+    }
+
+    if (props.midpointVertex) {
+      this._setNativeMidpointVertexProps(props.midpointVertex)
+    }
+  }
+
   onVertexDragStart(vertexPosition, coordinate) {
     var lowerPosition = vertexPosition - 1;
     var upperPosition = vertexPosition;
@@ -155,45 +169,49 @@ class MapEditablePolygon extends React.Component {
     return deepClone(this.state.coordinates);
   }
 
-  getCenterOffsetFromAnchor(scalar = 1) {
+  getCenterOffsetFromAnchor(anchor, size, scalar = 1) {
     return markerUtils.getCenterOffsetFromAnchor(
-      this.props.vertexAnchor.x,
-      this.props.vertexAnchor.y,
-      this.props.vertexSize.width,
-      this.props.vertexSize.height,
+      anchor.x,
+      anchor.y,
+      size.width,
+      size.height,
       scalar,
     );
   }
 
   renderVertices() {
-    const { width, height } = this.props.vertexSize;
     const vertices = [];
 
     this.state.coordinates.forEach((coord, vertexPosition) => {
-      const style = {
-        width: width,
-        height: height,
-        borderRadius: width,
+      const baseStyle = {
+        ...this.props.vertexSize,
+      }
+
+      const customStyle = this.props.vertexStyle || {
+        borderRadius: this.props.vertexSize.width,
         backgroundColor: 'black',
         borderWidth: 3,
         borderColor: 'white',
       };
+
+      const style = [baseStyle, customStyle]
+
       vertices.push(
         <MapView.Marker
           draggable
           ref={ref => { this.state.vertices[vertexPosition] = ref; }}
           key={`${this.props.id}-vertex-${vertexPosition}`}
           coordinate={coord}
-          centerOffset={this.getCenterOffsetFromAnchor()}
+          centerOffset={this.getCenterOffsetFromAnchor(this.props.vertexAnchor, this.props.vertexSize)}
           anchor={this.props.vertexAnchor}
           zIndex={this.props.zIndex + 1}
           onDragStart={() => this.onVertexDragStart(vertexPosition)}
           onDrag={(e) => this.onVertexDrag(vertexPosition, e.nativeEvent.coordinate)}
           onDragEnd={(e) => this.onVertexDragEnd(vertexPosition, e.nativeEvent.coordinate)}
           onPress={() => this.onVertexDelete(vertexPosition)}>
-          <View
-            ref={`vertex-${vertexPosition}`}
-            style={style}></View>
+          <View ref={`vertex-${vertexPosition}`} style={style}>
+              {this.props.renderVertex ? this.props.renderVertex() : null}
+            </View>
         </MapView.Marker>
       );
     });
@@ -202,7 +220,6 @@ class MapEditablePolygon extends React.Component {
   }
 
   renderMidpointVertices() {
-    const { width, height } = this.props.vertexSize;
     const midpointVertices = [];
 
     this.state.coordinates.forEach((coord, vertexPosition) => {
@@ -220,14 +237,18 @@ class MapEditablePolygon extends React.Component {
         );
       }
 
-      const style = {
-        width: width / 2,
-        height: height / 2,
-        borderRadius: width / 2,
+      const baseStyle = {
+        ...this.props.midpointVertexSize,
+      };
+
+      const customStyle = this.props.midpointVertexStyle || {
+        borderRadius: this.props.midpointVertexSize.width,
         backgroundColor: 'grey',
         borderWidth: 3,
         borderColor: 'black',
       };
+
+      const style = [baseStyle, customStyle];
 
       midpointVertices.push(
         <MapView.Marker
@@ -235,14 +256,14 @@ class MapEditablePolygon extends React.Component {
           ref={ref => { this.state.midpointVertices[vertexPosition] = ref; }}
           key={`${this.props.id}-midpoint-vertex-${vertexPosition}`}
           coordinate={midpointCoord}
-          centerOffset={this.getCenterOffsetFromAnchor(0.5)}
+          centerOffset={this.getCenterOffsetFromAnchor(this.props.midpointVertexAnchor, this.props.midpointVertexSize, 0.5)}
           anchor={this.props.vertexAnchor}
           zIndex={this.props.zIndex + 1}
           onDrag={(e) => this.onMidpointVertexDrag(vertexPosition, e.nativeEvent.coordinate)}
           onDragEnd={(e) => this.onMidpointVertexDragEnd(vertexPosition, e.nativeEvent.coordinate)}>
-          <View
-            ref={`midpoint-vertex-${vertexPosition}`}
-            style={style}></View>
+          <View ref={`midpoint-vertex-${vertexPosition}`} style={style}>
+            {this.props.renderMidpointVertex ? this.props.renderMidpointVertex() : null}
+          </View>
         </MapView.Marker>
       );
     });
@@ -286,7 +307,31 @@ class MapEditablePolygon extends React.Component {
       </View>
     );
   }
+
+  _setNativeShapeProps(props) {
+    this.polygon.setNativeProps(props)
+  }
+
+  _setNativeVertexProps(props) {
+    this.state.vertices.forEach((marker, vertexPosition) => {
+      const iconView = this.refs[`vertex-${vertexPosition}`];
+      if (iconView) {
+        iconView.setNativeProps(props);
+      }
+    });
+  }
+
+  _setNativeMidpointVertexProps(props) {
+    this.state.midpointVertices.forEach((marker, vertexPosition) => {
+      const iconView = this.refs[`midpoint-vertex-${vertexPosition}`];
+      if (iconView) {
+        iconView.setNativeProps(props);
+      }
+    });
+  }
 }
+
+MapEditablePolygon.DEFAULT_VERTEX_SIZE = 30;
 
 MapEditablePolygon.propTypes = {
   id: PropTypes.string,
@@ -297,11 +342,23 @@ MapEditablePolygon.propTypes = {
   onEditEnd: PropTypes.func,
   zIndex: PropTypes.number,
   shapeStyle: PropTypes.object,
+  vertexStyle: PropTypes.object,
+  midpointVertexStyle: PropTypes.object,
+  renderVertex: PropTypes.func,
+  renderMidpointVertex: PropTypes.func,
   vertexAnchor: PropTypes.shape({
     x: PropTypes.number,
     y: PropTypes.number,
   }),
+  midpointVertexAnchor: PropTypes.shape({
+    x: PropTypes.number,
+    y: PropTypes.number,
+  }),
   vertexSize: PropTypes.shape({
+    width: PropTypes.number,
+    height: PropTypes.number,
+  }),
+  midpointVertexSize: PropTypes.shape({
     width: PropTypes.number,
     height: PropTypes.number,
   }),
@@ -321,9 +378,17 @@ MapEditablePolygon.defaultProps = {
     x: 0.5,
     y: 0.5,
   },
+  midpointVertexAnchor: {
+    x: 0.5,
+    y: 0.5,
+  },
   vertexSize: {
-    width: 30,
-    height: 30,
+    width: MapEditablePolygon.DEFAULT_VERTEX_SIZE,
+    height: MapEditablePolygon.DEFAULT_VERTEX_SIZE,
+  },
+  midpointVertexSize: {
+    width: MapEditablePolygon.DEFAULT_VERTEX_SIZE / 2,
+    height: MapEditablePolygon.DEFAULT_VERTEX_SIZE / 2,
   },
 };
 
