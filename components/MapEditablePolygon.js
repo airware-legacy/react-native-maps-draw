@@ -92,7 +92,7 @@ class MapEditablePolygon extends React.Component {
     this.state.midpointVertices[upperPosition].setNativeProps({ coordinate: upperMidpointCoord, opacity: 1 });
 
     const coords = this.getCoordinates();
-    coords.splice(vertexPosition, 0, coordinate);
+    coords.splice(vertexPosition, 1, coordinate);
 
     // calculate new center
     if (this.props.draggable) {
@@ -116,7 +116,7 @@ class MapEditablePolygon extends React.Component {
       }
 
       if (this.props.onEditEnd) {
-        this.props.onEditEnd(coordinates);
+        this.props.onEditEnd(position, coordinates);
       }
     }
   }
